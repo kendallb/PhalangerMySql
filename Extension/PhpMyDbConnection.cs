@@ -25,11 +25,11 @@ namespace PHP.Library.Data
 {
 	internal sealed class MySqlConnectionManager : ConnectionManager
 	{
-    protected override PhpDbConnection CreateConnection(string/*!*/ connectionString)
-    {
-      return new PhpMyDbConnection(connectionString);
+        protected override PhpDbConnection CreateConnection(string/*!*/ connectionString)
+        {
+          return new PhpMyDbConnection(connectionString);
+        }
     }
-	}
 	
 	/// <summary>
 	/// Summary description for PhpMyDbConnection.
@@ -37,6 +37,7 @@ namespace PHP.Library.Data
 	public sealed class PhpMyDbConnection : PhpDbConnection
 	{
 		internal MySqlConnection Connection { get { return (MySqlConnection)connection; } }
+        private bool _sharedConnection;
 		
 		/// <summary>
 		/// Server.
@@ -51,7 +52,38 @@ namespace PHP.Library.Data
 		public PhpMyDbConnection(string/*!*/ connectionString) 
 		: base(connectionString, new MySqlConnection(), "mysql connection")
 		{
+            _sharedConnection = false;
 		}
+
+        /// <summary>
+        /// Override the connection to use a shared connection
+        /// </summary>
+        /// <param name="sharedConnection">Shared MySQL connection</param>
+        internal void SetSharedConnection(
+            MySqlConnection sharedConnection)
+        {
+            // Close the unused connection created in the constructor
+            connection.Close();
+
+            // Indicate this connection is now shared
+            _sharedConnection = true;
+
+            // Save the shared connection
+            connection = sharedConnection;
+        }
+
+        /// <summary>
+        /// Closes connection and releases the resource.
+        /// </summary>
+        protected override void FreeManaged()
+        {
+            // Get rid of the shared connection but don't close it! It will be closed later
+            if (_sharedConnection) {
+                connection = null;
+                _sharedConnection = false;
+            }
+            base.FreeManaged();
+        }
 
 		internal static PhpMyDbConnection ValidConnection(PhpResource handle)
 		{
@@ -69,7 +101,24 @@ namespace PHP.Library.Data
 			return null;
 		}
 
-		/// <summary>
+        /// <summary>
+        /// Executes a query on the connection.
+        /// </summary>
+        /// <param name="query">The query.</param>
+        /// <param name="convertTypes">Whether to convert data types to PHP ones.</param>
+        /// <returns>PhpDbResult class representing the data read from database.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="query"/> is a <B>null</B> reference.</exception>
+        /// <exception cref="PhpException">Query execution failed (Warning).</exception>
+        public new PhpDbResult ExecuteQuery(string/*!*/ query, bool convertTypes)
+        {
+            if (query == null)
+                throw new ArgumentNullException("query");
+            var result = ExecuteCommand(query, CommandType.Text, convertTypes, null, false);
+            ClosePendingReader();
+            return result;
+        }
+
+        /// <summary>
 		/// Gets a query result resource.
 		/// </summary>
 		/// <param name="connection">Database connection.</param>
