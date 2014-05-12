@@ -20,6 +20,7 @@ using MySql.Data.MySqlClient;
 using System.Collections.Generic;
 
 using PHP.Core;
+using PHP.Core.Reflection;
 
 namespace PHP.Library.Data
 {
@@ -181,6 +182,39 @@ namespace PHP.Library.Data
         #endregion
 
         #region mysql_connect, NS: mysql_pconnect
+
+        /// <summary>
+        /// Wraps an existing MySQL connection with a PhpMyDbConnection
+        /// </summary>
+        /// <param name="clrConnection">MySqlConnection to share.</param>
+        /// <param name="connectionString">Connection string for this MySqlConnection.</param>
+        /// <returns>
+        /// Resource representing the connection or a <B>null</B> reference (<B>false</B> in PHP) on failure.
+        /// </returns>
+        /// <remarks>
+        /// Default values are taken from the configuration.
+        /// </remarks>
+        [ImplementsFunction("mysql_connect_shared")]
+        [return: CastToFalse]
+        public static PhpResource ConnectShared(
+            ClrObject clrConnection,
+            string connectionString)
+        {
+            bool success;
+            PhpMyDbConnection connection = (PhpMyDbConnection)manager.OpenConnection(connectionString, false, MySqlConfiguration.Global.MaxConnections, out success);
+
+            if (!success) {
+                if (connection != null) {
+                    UpdateConnectErrorInfo(connection);
+                    connection = null;
+                }
+                return null;
+            }
+
+            // Set the shared connection
+            connection.SetSharedConnection(clrConnection.RealObject as MySqlConnection);
+            return connection;
+        }
 
         /// <summary>
         /// Establishes a new connection to MySQL server using default server, credentials, and flags.
@@ -728,7 +762,9 @@ namespace PHP.Library.Data
 
             //
             commandText = string.Concat(commandText, encoding.GetString(query, commandTextLast, query.Length - commandTextLast));
-            return connection.ExecuteCommand(commandText, CommandType.Text, true, parameters, false);
+            var result = connection.ExecuteCommand(commandText, CommandType.Text, true, parameters, false);
+            connection.ClosePendingReader();
+            return result;
         }
 
         /// <summary>
@@ -1937,6 +1973,7 @@ namespace PHP.Library.Data
             // set the charset:
             var result = connection.ExecuteCommand("SET NAMES " + charset, CommandType.Text, false, null, true);
             if (result != null) result.Dispose();
+            connection.ClosePendingReader();
 
             // success if there were no errors:
             return connection.LastException != null;
