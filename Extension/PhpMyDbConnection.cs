@@ -102,23 +102,6 @@ namespace PHP.Library.Data
 		}
 
         /// <summary>
-        /// Executes a query on the connection.
-        /// </summary>
-        /// <param name="query">The query.</param>
-        /// <param name="convertTypes">Whether to convert data types to PHP ones.</param>
-        /// <returns>PhpDbResult class representing the data read from database.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="query"/> is a <B>null</B> reference.</exception>
-        /// <exception cref="PhpException">Query execution failed (Warning).</exception>
-        public new PhpDbResult ExecuteQuery(string/*!*/ query, bool convertTypes)
-        {
-            if (query == null)
-                throw new ArgumentNullException("query");
-            var result = ExecuteCommand(query, CommandType.Text, convertTypes, null, false);
-            ClosePendingReader();
-            return result;
-        }
-
-        /// <summary>
 		/// Gets a query result resource.
 		/// </summary>
 		/// <param name="connection">Database connection.</param>

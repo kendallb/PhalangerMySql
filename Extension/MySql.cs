@@ -763,9 +763,7 @@ namespace PHP.Library.Data
 
             //
             commandText = string.Concat(commandText, encoding.GetString(query, commandTextLast, query.Length - commandTextLast));
-            var result = connection.ExecuteCommand(commandText, CommandType.Text, true, parameters, false);
-            connection.ClosePendingReader();
-            return result;
+            return connection.ExecuteCommand(commandText, CommandType.Text, true, parameters, false);
         }
 
         /// <summary>
@@ -1974,7 +1972,6 @@ namespace PHP.Library.Data
             // set the charset:
             var result = connection.ExecuteCommand("SET NAMES " + charset, CommandType.Text, false, null, true);
             if (result != null) result.Dispose();
-            connection.ClosePendingReader();
 
             // success if there were no errors:
             return connection.LastException != null;
