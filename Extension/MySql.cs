@@ -180,6 +180,33 @@ namespace PHP.Library.Data
             return true;
         }
 
+        /// <summary>
+        /// Close pending reader.
+        /// </summary>
+        /// <returns><B>true</B> on success, <B>false</B> on failure.</returns>
+        [ImplementsFunction("mysql_close_pending_reader")]
+        public static bool ClosePendingReader()
+        {
+            PhpDbConnection last_connection = manager.GetLastConnection();
+            if (last_connection == null) return false;
+            last_connection.ClosePendingReader();
+            return true;
+        }
+
+        /// <summary>
+        /// Closes pending reader for a specified connection.
+        /// </summary>
+        /// <param name="linkIdentifier">The connection resource.</param>
+        /// <returns><B>true</B> on success, <B>false</B> on failure.</returns>
+        [ImplementsFunction("mysql_close_pending_reader")]
+        public static bool ClosePendingReader(PhpResource linkIdentifier)
+        {
+            PhpMyDbConnection connection = PhpMyDbConnection.ValidConnection(linkIdentifier);
+            if (connection == null) return false;
+            connection.ClosePendingReader();
+            return true;
+        }
+
         #endregion
 
         #region mysql_connect, NS: mysql_pconnect
@@ -501,15 +528,14 @@ namespace PHP.Library.Data
             return PhpMyDbConnection.BuildConnectionString(
               server, user, password,
 
-              String.Format("allowzerodatetime=true;allow user variables=true;connect timeout={0};Port={1};SSL Mode={2};Use Compression={3}{4}{5};Max Pool Size={6}{7}",
+              String.Format("allowzerodatetime=true;allow user variables=true;connect timeout={0};Port={1};SSL Mode={2};Use Compression={3}{4}{5};Max Pool Size={6}",
                 (local.ConnectTimeout > 0) ? local.ConnectTimeout : Int32.MaxValue,
                 port,
                 (flags & ConnectFlags.SSL) != 0 ? "Preferred" : "None",     // (since Connector 6.2.1.) ssl mode={None|Preferred|Required|VerifyCA|VerifyFull}   // (Jakub) use ssl={true|false} has been deprecated
                 (flags & ConnectFlags.Compress) != 0 ? "true" : "false",    // Use Compression={true|false}
                 (pipe_name != null) ? ";Pipe=" + pipe_name : null,  // Pipe={...}
                 (flags & ConnectFlags.Interactive) != 0 ? ";Interactive=true" : null,    // Interactive={true|false}
-                global.MaxPoolSize,                                          // Max Pool Size=100
-                (local.DefaultCommandTimeout >= 0) ? ";DefaultCommandTimeout=" + local.DefaultCommandTimeout : null
+                global.MaxPoolSize                                          // Max Pool Size=100
                 )
             );
         }

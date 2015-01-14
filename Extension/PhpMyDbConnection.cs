@@ -27,7 +27,7 @@ namespace PHP.Library.Data
 	{
         protected override PhpDbConnection CreateConnection(string/*!*/ connectionString)
         {
-          return new PhpMyDbConnection(connectionString);
+            return new PhpMyDbConnection(connectionString, ScriptContext.CurrentContext);
         }
     }
 	
@@ -37,6 +37,7 @@ namespace PHP.Library.Data
 	public sealed class PhpMyDbConnection : PhpDbConnection
 	{
 		internal MySqlConnection Connection { get { return (MySqlConnection)connection; } }
+        private readonly ScriptContext/*!*/ _context;
         private bool _sharedConnection;
 		
 		/// <summary>
@@ -49,9 +50,14 @@ namespace PHP.Library.Data
 		/// <summary>
 		/// Creates a connection resource.
 		/// </summary>
-		public PhpMyDbConnection(string/*!*/ connectionString) 
+        /// <param name="connectionString">Connection string.</param>
+        /// <param name="context">Script context associated with the connection.</param>
+        public PhpMyDbConnection(string/*!*/ connectionString, ScriptContext/*!*/ context) 
 		: base(connectionString, new MySqlConnection(), "mysql connection")
 		{
+            if (context == null)
+                throw new ArgumentNullException("context");
+            _context = context;
             _sharedConnection = false;
 		}
 
@@ -112,17 +118,22 @@ namespace PHP.Library.Data
 		{
 			return new PhpMyDbResult(connection, reader, convertTypes);
 		}
-		
-    /// <summary>
-    /// Command factory.
-    /// </summary>
-    /// <returns>An empty instance of <see cref="MySqlCommand"/>.</returns>
-    protected override IDbCommand/*!*/ CreateCommand()
-    {
-      return new MySqlCommand();
-    }
-		
-		/// <summary>
+
+	    /// <summary>
+	    /// Command factory.
+	    /// </summary>
+	    /// <returns>An empty instance of <see cref="MySqlCommand"/>.</returns>
+	    protected override IDbCommand /*!*/ CreateCommand()
+	    {
+	        MySqlCommand command = new MySqlCommand();
+	        MySqlLocalConfig local = MySqlConfiguration.GetLocal(_context);
+	        if (local.DefaultCommandTimeout > 0) {
+	            command.CommandTimeout = local.DefaultCommandTimeout;
+	        }
+	        return command;
+	    }
+
+	    /// <summary>
 		/// Gets last error number.
 		/// </summary>
 		/// <returns>The error number it is known, -1 if unknown error occured, or zero on success.</returns>
