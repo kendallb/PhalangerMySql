@@ -127,7 +127,7 @@ namespace PHP.Library.Data
 	    {
 	        MySqlCommand command = new MySqlCommand();
 	        MySqlLocalConfig local = MySqlConfiguration.GetLocal(_context);
-	        if (local.DefaultCommandTimeout > 0) {
+	        if (local.DefaultCommandTimeout >= 0) {
 	            command.CommandTimeout = local.DefaultCommandTimeout;
 	        }
 	        return command;
