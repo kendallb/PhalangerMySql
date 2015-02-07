@@ -22,6 +22,7 @@ using System.Collections.Generic;
 
 using PHP.Core;
 using PHP.Core.Reflection;
+using PHP.Core.Utilities;
 
 namespace PHP.Library.Data
 {
@@ -107,27 +108,26 @@ namespace PHP.Library.Data
         {
             get
             {
-                if (_manager == null) _manager = new MySqlConnectionManager();
-                return _manager;
+                var manager = _manager.Value;
+                if (manager == null) 
+                    manager = _manager.Value = new MySqlConnectionManager();
+                return manager;
             }
         }
-        [ThreadStatic]
-        private static MySqlConnectionManager _manager;
+        private static RequestStatic<MySqlConnectionManager> _manager = new RequestStatic<MySqlConnectionManager>(() => _manager.Value);
 
-        [ThreadStatic]
-        private static string failConnectErrorMessage = "";
+        private static RequestStatic<string> _failConnectErrorMessage = new RequestStatic<string>(() => _failConnectErrorMessage.Value, "");
 
-        [ThreadStatic]
-        private static int failConnectErrorNumber = 0;
+        private static RequestStatic<int> _failConnectErrorNumber = new RequestStatic<int>(() => _failConnectErrorNumber.Value);
 
         /// <summary>
         /// Clears thread static fields at the end of each request.
         /// </summary>
         private static void Clear()
         {
-            _manager = null;
-            failConnectErrorMessage = "";
-            failConnectErrorNumber = 0;
+            _manager.Value = null;
+            _failConnectErrorMessage.Value = "";
+            _failConnectErrorNumber.Value = 0;
         }
 
         static MySql()
@@ -137,8 +137,8 @@ namespace PHP.Library.Data
 
         private static void UpdateConnectErrorInfo(PhpMyDbConnection connection)
         {
-            failConnectErrorMessage = connection.GetLastErrorMessage();
-            failConnectErrorNumber = connection.GetLastErrorNumber();
+            _failConnectErrorMessage.Value = connection.GetLastErrorMessage();
+            _failConnectErrorNumber.Value = connection.GetLastErrorNumber();
         }
 
         #endregion
@@ -1068,7 +1068,7 @@ namespace PHP.Library.Data
             PhpDbConnection last_connection = manager.GetLastConnection();
 
             if (last_connection == null)
-                return failConnectErrorMessage;
+                return _failConnectErrorMessage.Value;
 
             return LastErrorMessage(last_connection);
         }
@@ -1100,7 +1100,7 @@ namespace PHP.Library.Data
             PhpDbConnection last_connection = manager.GetLastConnection();
 
             if (last_connection == null)
-                return failConnectErrorNumber;
+                return _failConnectErrorNumber.Value;
 
             return LastErrorNumber(last_connection);
         }
