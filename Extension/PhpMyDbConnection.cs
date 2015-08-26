@@ -145,15 +145,17 @@ namespace PHP.Library.Data
 		  return (e!=null) ? e.Number : -1;
 		}
 		
-    /// <summary>
+        /// <summary>
 		/// Gets the last error message.
 		/// </summary>
 		/// <returns>The message or an empty string if no error occured.</returns>
 		public override string GetLastErrorMessage()
-    {
-      return StripErrorNumber(base.GetLastErrorMessage());
-    }
-
+        {
+          if (LastException != null && !(LastException is MySqlException)) {
+            return LastException.Message + "\n\n" + LastException.StackTrace;
+          }
+          return StripErrorNumber(base.GetLastErrorMessage());
+        }
 		
 		/// <summary>
 		/// Gets a message from an exception raised by the connector.
