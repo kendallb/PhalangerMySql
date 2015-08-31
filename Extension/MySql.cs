@@ -14,7 +14,6 @@
 using System;
 using System.Data;
 using System.Diagnostics;
-using System.Collections;
 using System.Text;
 using System.Linq;
 using MySql.Data.MySqlClient;
@@ -22,7 +21,6 @@ using System.Collections.Generic;
 
 using PHP.Core;
 using PHP.Core.Reflection;
-using PHP.Core.Utilities;
 
 namespace PHP.Library.Data
 {
@@ -102,43 +100,42 @@ namespace PHP.Library.Data
 
         #endregion
 
-        #region Thread Static Variables
+        #region Global Connection Manager
+
+        private class StaticInfo
+        {
+            public readonly MySqlConnectionManager Manager = new MySqlConnectionManager();
+            public string FailConnectErrorMessage = "";
+            public int FailConnectErrorNumber = 0;
+
+            public static StaticInfo Get
+            {
+                get
+                {
+                    StaticInfo info;
+                    var properties = ThreadStatic.Properties;
+                    if (properties.TryGetProperty<StaticInfo>(out info) == false || info == null)
+                    {
+                        properties.SetProperty(info = new StaticInfo());
+                    }
+                    return info;
+                }
+            }
+        }
 
         private static MySqlConnectionManager manager
         {
             get
             {
-                var manager = _manager.Value;
-                if (manager == null) 
-                    manager = _manager.Value = new MySqlConnectionManager();
-                return manager;
+                return StaticInfo.Get.Manager;
             }
-        }
-        private static RequestStatic<MySqlConnectionManager> _manager = new RequestStatic<MySqlConnectionManager>(() => _manager.Value);
-
-        private static RequestStatic<string> _failConnectErrorMessage = new RequestStatic<string>(() => _failConnectErrorMessage.Value, "");
-
-        private static RequestStatic<int> _failConnectErrorNumber = new RequestStatic<int>(() => _failConnectErrorNumber.Value);
-
-        /// <summary>
-        /// Clears thread static fields at the end of each request.
-        /// </summary>
-        private static void Clear()
-        {
-            _manager.Value = null;
-            _failConnectErrorMessage.Value = "";
-            _failConnectErrorNumber.Value = 0;
-        }
-
-        static MySql()
-        {
-            RequestContext.RequestEnd += new Action(Clear);
         }
 
         private static void UpdateConnectErrorInfo(PhpMyDbConnection connection)
         {
-            _failConnectErrorMessage.Value = connection.GetLastErrorMessage();
-            _failConnectErrorNumber.Value = connection.GetLastErrorNumber();
+            var info = StaticInfo.Get;
+            info.FailConnectErrorMessage = connection.GetLastErrorMessage();
+            info.FailConnectErrorNumber = connection.GetLastErrorNumber();
         }
 
         #endregion
@@ -1068,7 +1065,7 @@ namespace PHP.Library.Data
             PhpDbConnection last_connection = manager.GetLastConnection();
 
             if (last_connection == null)
-                return _failConnectErrorMessage.Value;
+                return StaticInfo.Get.FailConnectErrorMessage;
 
             return LastErrorMessage(last_connection);
         }
@@ -1100,7 +1097,7 @@ namespace PHP.Library.Data
             PhpDbConnection last_connection = manager.GetLastConnection();
 
             if (last_connection == null)
-                return _failConnectErrorNumber.Value;
+                return StaticInfo.Get.FailConnectErrorNumber;
 
             return LastErrorNumber(last_connection);
         }
