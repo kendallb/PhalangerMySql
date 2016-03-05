@@ -82,23 +82,23 @@ namespace PHP.Library.Data
         /// <returns>Row data.</returns>
         protected override object[] GetValues(string[] dataTypes, bool convertTypes)
         {
-            MySqlDataReader my_reader = (MySqlDataReader)Reader;
+            IDataReader reader = Reader;
 
-            object[] oa = new object[my_reader.FieldCount];
+            object[] oa = new object[reader.FieldCount];
             
             if (convertTypes)
             {
                 Debug.Assert(dataTypes.Length >= oa.Length);
                 for (int i = 0; i < oa.Length; i++)
                 {
-                    oa[i] = ConvertDbValue(dataTypes[i], my_reader.GetValue(i));
+                    oa[i] = ConvertDbValue(dataTypes[i], reader.GetValue(i));
                 }
             }
             else
             {
                 for (int i = 0; i < oa.Length; i++)
                 {
-                    oa[i] = my_reader.GetValue(i);
+                    oa[i] = reader.GetValue(i);
                 }
             }
 
@@ -106,12 +106,34 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
+        /// Gets the underlying MySql data reader from the reader. We specifically support the case where
+        /// the reader is a wrapped reader such as we get from Glimpse, and we look for InnerDataReader to 
+        /// find the native MySqlDataReader when we need it.
+        /// </summary>
+        internal MySqlDataReader MySqlDataReader
+        {
+            get
+            {
+                if (_mySqlDataReader == null) 
+                {
+                    _mySqlDataReader = Reader as MySqlDataReader;
+                    if (_mySqlDataReader == null)
+                    {
+                        _mySqlDataReader = MySqlDataReaderHelper.GetProperty<MySqlDataReader>(Reader, "InnerDataReader");
+                    }
+                }
+                return _mySqlDataReader;
+            }
+        }
+        private MySqlDataReader _mySqlDataReader;
+
+        /// <summary>
         /// Collect additional information about current row of Reader.
         /// </summary>
         /// <returns>An array of <see cref="FieldCustomData"/>.</returns>
         protected override object GetCustomData()
         {
-            MySqlDataReader my_reader = (MySqlDataReader)Reader;
+            MySqlDataReader my_reader = MySqlDataReader;
 
             var data = new FieldCustomData[my_reader.FieldCount];
 

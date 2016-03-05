@@ -17,6 +17,25 @@ namespace PHP.Library.Data
         private static readonly object locker = new object();
 
         /// <summary>
+        /// Get a property value from an object given it's name and cast to the specific type. 
+        /// </summary>
+        /// <typeparam name="T">Type to convert to</typeparam>
+        /// <param name="src">Source objec to get the property value from</param>
+        /// <param name="propName">Name of the property to read</param>
+        /// <returns>Converted type. Exception on failure</returns>
+        public static T GetProperty<T>(object src, string propName)
+        {
+            try 
+            {
+                return (T)src.GetType().GetProperty(propName).GetValue(src, null);
+            } 
+            catch (Exception e) 
+            {
+                throw new ArgumentException("Unable to get property for type '" + src.GetType().Name + "'", e);
+            }
+        }
+
+        /// <summary>
         /// Generate unprotected (private) field read of ((<typeparamref name="TArg0"/>)<paramref name="arg0"/>).<paramref name="fieldName"/>.
         /// </summary>
         /// <typeparam name="TArg0">Type of object instance.</typeparam>

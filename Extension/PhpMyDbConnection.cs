@@ -36,7 +36,6 @@ namespace PHP.Library.Data
 	/// </summary>
 	public sealed class PhpMyDbConnection : PhpDbConnection
 	{
-		internal MySqlConnection Connection { get { return (MySqlConnection)connection; } }
         private readonly ScriptContext/*!*/ _context;
         private bool _sharedConnection;
 		
@@ -61,12 +60,34 @@ namespace PHP.Library.Data
             _sharedConnection = false;
 		}
 
-        /// <summary>
+	    /// <summary>
+	    /// Gets the underlying MySql connection from the connection. We specifically support the case where
+	    /// the connection is a wrapped connection such as we get from Glimpse, and we look for InnerConnection to 
+	    /// find the native MySqlConnection when we need it.
+	    /// </summary>
+	    internal MySqlConnection MySqlConnection
+	    {
+	        get
+	        {
+	            if (_mySqlConnection == null) 
+                {
+                    _mySqlConnection = connection as MySqlConnection;
+                    if (_mySqlConnection == null) 
+                    {
+                        _mySqlConnection = MySqlDataReaderHelper.GetProperty<MySqlConnection>(connection, "InnerConnection");
+                    }
+                }
+                return _mySqlConnection;
+	        }
+	    }
+	    private MySqlConnection _mySqlConnection;
+
+	    /// <summary>
         /// Override the connection to use a shared connection
         /// </summary>
         /// <param name="sharedConnection">Shared MySQL connection</param>
         internal void SetSharedConnection(
-            MySqlConnection sharedConnection)
+            IDbConnection sharedConnection)
         {
             // Close the unused connection created in the constructor
             connection.Close();
@@ -125,7 +146,7 @@ namespace PHP.Library.Data
 	    /// <returns>An empty instance of <see cref="MySqlCommand"/>.</returns>
 	    protected override IDbCommand /*!*/ CreateCommand()
 	    {
-	        MySqlCommand command = new MySqlCommand();
+	        IDbCommand command = connection.CreateCommand();
 	        MySqlLocalConfig local = MySqlConfiguration.GetLocal(_context);
 	        if (local.DefaultCommandTimeout >= 0) {
 	            command.CommandTimeout = local.DefaultCommandTimeout;

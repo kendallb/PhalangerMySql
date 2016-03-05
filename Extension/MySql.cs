@@ -237,7 +237,7 @@ namespace PHP.Library.Data
             }
 
             // Set the shared connection
-            connection.SetSharedConnection(clrConnection.RealObject as MySqlConnection);
+            connection.SetSharedConnection(clrConnection.RealObject as IDbConnection);
             return connection;
         }
 
@@ -897,7 +897,7 @@ namespace PHP.Library.Data
             PhpMyDbConnection connection = PhpMyDbConnection.ValidConnection(linkIdentifier);
             if (connection == null) return 0;
 
-            return connection.Connection.ServerThread;
+            return connection.MySqlConnection.ServerThread;
         }
 
         #endregion
@@ -1862,7 +1862,7 @@ namespace PHP.Library.Data
             PhpMyDbConnection connection = PhpMyDbConnection.ValidConnection(linkIdentifier);
             if (connection == null) return null;
 
-            return connection.Connection.ServerVersion;
+            return connection.MySqlConnection.ServerVersion;
         }
 
         /// <summary>
@@ -2031,7 +2031,7 @@ namespace PHP.Library.Data
 
             try
             {
-                return connection.Connection.Ping();
+                return connection.MySqlConnection.Ping();
             }
             catch (Exception)
             {
