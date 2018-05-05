@@ -13,14 +13,14 @@
 
 using System;
 using System.Data;
-using System.Collections;
+using System.Diagnostics;
 using System.Text;
 using System.Linq;
 using MySql.Data.MySqlClient;
 using System.Collections.Generic;
 
 using PHP.Core;
-using System.Diagnostics;
+using PHP.Core.Reflection;
 
 namespace PHP.Library.Data
 {
@@ -100,44 +100,42 @@ namespace PHP.Library.Data
 
         #endregion
 
-        #region Thread Static Variables
+        #region Global Connection Manager
+
+        private class StaticInfo
+        {
+            public readonly MySqlConnectionManager Manager = new MySqlConnectionManager();
+            public string FailConnectErrorMessage = "";
+            public int FailConnectErrorNumber = 0;
+
+            public static StaticInfo Get
+            {
+                get
+                {
+                    StaticInfo info;
+                    var properties = ThreadStatic.Properties;
+                    if (properties.TryGetProperty<StaticInfo>(out info) == false || info == null)
+                    {
+                        properties.SetProperty(info = new StaticInfo());
+                    }
+                    return info;
+                }
+            }
+        }
 
         private static MySqlConnectionManager manager
         {
             get
             {
-                if (_manager == null) _manager = new MySqlConnectionManager();
-                return _manager;
+                return StaticInfo.Get.Manager;
             }
-        }
-        [ThreadStatic]
-        private static MySqlConnectionManager _manager;
-
-        [ThreadStatic]
-        private static string failConnectErrorMessage = "";
-
-        [ThreadStatic]
-        private static int failConnectErrorNumber = 0;
-
-        /// <summary>
-        /// Clears thread static fields at the end of each request.
-        /// </summary>
-        private static void Clear()
-        {
-            _manager = null;
-            failConnectErrorMessage = "";
-            failConnectErrorNumber = 0;
-        }
-
-        static MySql()
-        {
-            RequestContext.RequestEnd += new Action(Clear);
         }
 
         private static void UpdateConnectErrorInfo(PhpMyDbConnection connection)
         {
-            failConnectErrorMessage = connection.GetLastErrorMessage();
-            failConnectErrorNumber = connection.GetLastErrorNumber();
+            var info = StaticInfo.Get;
+            info.FailConnectErrorMessage = connection.GetLastErrorMessage();
+            info.FailConnectErrorNumber = connection.GetLastErrorNumber();
         }
 
         #endregion
@@ -179,9 +177,69 @@ namespace PHP.Library.Data
             return true;
         }
 
+        /// <summary>
+        /// Close pending reader.
+        /// </summary>
+        /// <returns><B>true</B> on success, <B>false</B> on failure.</returns>
+        [ImplementsFunction("mysql_close_pending_reader")]
+        public static bool ClosePendingReader()
+        {
+            PhpDbConnection last_connection = manager.GetLastConnection();
+            if (last_connection == null) return false;
+            last_connection.ClosePendingReader();
+            return true;
+        }
+
+        /// <summary>
+        /// Closes pending reader for a specified connection.
+        /// </summary>
+        /// <param name="linkIdentifier">The connection resource.</param>
+        /// <returns><B>true</B> on success, <B>false</B> on failure.</returns>
+        [ImplementsFunction("mysql_close_pending_reader")]
+        public static bool ClosePendingReader(PhpResource linkIdentifier)
+        {
+            PhpMyDbConnection connection = PhpMyDbConnection.ValidConnection(linkIdentifier);
+            if (connection == null) return false;
+            connection.ClosePendingReader();
+            return true;
+        }
+
         #endregion
 
         #region mysql_connect, NS: mysql_pconnect
+
+        /// <summary>
+        /// Wraps an existing MySQL connection with a PhpMyDbConnection
+        /// </summary>
+        /// <param name="clrConnection">MySqlConnection to share.</param>
+        /// <param name="connectionString">Connection string for this MySqlConnection.</param>
+        /// <returns>
+        /// Resource representing the connection or a <B>null</B> reference (<B>false</B> in PHP) on failure.
+        /// </returns>
+        /// <remarks>
+        /// Default values are taken from the configuration.
+        /// </remarks>
+        [ImplementsFunction("mysql_connect_shared")]
+        [return: CastToFalse]
+        public static PhpResource ConnectShared(
+            ClrObject clrConnection,
+            string connectionString)
+        {
+            bool success;
+            PhpMyDbConnection connection = (PhpMyDbConnection)manager.OpenConnection(connectionString, false, MySqlConfiguration.Global.MaxConnections, out success);
+
+            if (!success) {
+                if (connection != null) {
+                    UpdateConnectErrorInfo(connection);
+                    connection = null;
+                }
+                return null;
+            }
+
+            // Set the shared connection
+            connection.SetSharedConnection(clrConnection.RealObject as IDbConnection);
+            return connection;
+        }
 
         /// <summary>
         /// Establishes a new connection to MySQL server using default server, credentials, and flags.
@@ -467,15 +525,14 @@ namespace PHP.Library.Data
             return PhpMyDbConnection.BuildConnectionString(
               server, user, password,
 
-              String.Format("allowzerodatetime=true;allow user variables=true;connect timeout={0};Port={1};SSL Mode={2};Use Compression={3}{4}{5};Max Pool Size={6}{7}",
+              String.Format("allowzerodatetime=true;allow user variables=true;connect timeout={0};Port={1};SSL Mode={2};Use Compression={3}{4}{5};Max Pool Size={6}",
                 (local.ConnectTimeout > 0) ? local.ConnectTimeout : Int32.MaxValue,
                 port,
                 (flags & ConnectFlags.SSL) != 0 ? "Preferred" : "None",     // (since Connector 6.2.1.) ssl mode={None|Preferred|Required|VerifyCA|VerifyFull}   // (Jakub) use ssl={true|false} has been deprecated
                 (flags & ConnectFlags.Compress) != 0 ? "true" : "false",    // Use Compression={true|false}
                 (pipe_name != null) ? ";Pipe=" + pipe_name : null,  // Pipe={...}
                 (flags & ConnectFlags.Interactive) != 0 ? ";Interactive=true" : null,    // Interactive={true|false}
-                global.MaxPoolSize,                                          // Max Pool Size=100
-                (local.DefaultCommandTimeout >= 0) ? ";DefaultCommandTimeout=" + local.DefaultCommandTimeout : null
+                global.MaxPoolSize                                          // Max Pool Size=100
                 )
             );
         }
@@ -840,7 +897,7 @@ namespace PHP.Library.Data
             PhpMyDbConnection connection = PhpMyDbConnection.ValidConnection(linkIdentifier);
             if (connection == null) return 0;
 
-            return connection.Connection.ServerThread;
+            return connection.MySqlConnection.ServerThread;
         }
 
         #endregion
@@ -1008,7 +1065,7 @@ namespace PHP.Library.Data
             PhpDbConnection last_connection = manager.GetLastConnection();
 
             if (last_connection == null)
-                return failConnectErrorMessage;
+                return StaticInfo.Get.FailConnectErrorMessage;
 
             return LastErrorMessage(last_connection);
         }
@@ -1040,7 +1097,7 @@ namespace PHP.Library.Data
             PhpDbConnection last_connection = manager.GetLastConnection();
 
             if (last_connection == null)
-                return failConnectErrorNumber;
+                return StaticInfo.Get.FailConnectErrorNumber;
 
             return LastErrorNumber(last_connection);
         }
@@ -1805,7 +1862,7 @@ namespace PHP.Library.Data
             PhpMyDbConnection connection = PhpMyDbConnection.ValidConnection(linkIdentifier);
             if (connection == null) return null;
 
-            return connection.Connection.ServerVersion;
+            return connection.MySqlConnection.ServerVersion;
         }
 
         /// <summary>
@@ -1974,7 +2031,7 @@ namespace PHP.Library.Data
 
             try
             {
-                return connection.Connection.Ping();
+                return connection.MySqlConnection.Ping();
             }
             catch (Exception)
             {

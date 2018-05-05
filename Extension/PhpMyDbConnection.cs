@@ -25,18 +25,19 @@ namespace PHP.Library.Data
 {
 	internal sealed class MySqlConnectionManager : ConnectionManager
 	{
-    protected override PhpDbConnection CreateConnection(string/*!*/ connectionString)
-    {
-      return new PhpMyDbConnection(connectionString);
+        protected override PhpDbConnection CreateConnection(string/*!*/ connectionString)
+        {
+            return new PhpMyDbConnection(connectionString, ScriptContext.CurrentContext);
+        }
     }
-	}
 	
 	/// <summary>
 	/// Summary description for PhpMyDbConnection.
 	/// </summary>
 	public sealed class PhpMyDbConnection : PhpDbConnection
 	{
-		internal MySqlConnection Connection { get { return (MySqlConnection)connection; } }
+        private readonly ScriptContext/*!*/ _context;
+        private bool _sharedConnection;
 		
 		/// <summary>
 		/// Server.
@@ -48,10 +49,68 @@ namespace PHP.Library.Data
 		/// <summary>
 		/// Creates a connection resource.
 		/// </summary>
-		public PhpMyDbConnection(string/*!*/ connectionString) 
+        /// <param name="connectionString">Connection string.</param>
+        /// <param name="context">Script context associated with the connection.</param>
+        public PhpMyDbConnection(string/*!*/ connectionString, ScriptContext/*!*/ context) 
 		: base(connectionString, new MySqlConnection(), "mysql connection")
 		{
+            if (context == null)
+                throw new ArgumentNullException("context");
+            _context = context;
+            _sharedConnection = false;
 		}
+
+	    /// <summary>
+	    /// Gets the underlying MySql connection from the connection. We specifically support the case where
+	    /// the connection is a wrapped connection such as we get from Glimpse, and we look for InnerConnection to 
+	    /// find the native MySqlConnection when we need it.
+	    /// </summary>
+	    internal MySqlConnection MySqlConnection
+	    {
+	        get
+	        {
+	            if (_mySqlConnection == null) 
+                {
+                    _mySqlConnection = connection as MySqlConnection;
+                    if (_mySqlConnection == null) 
+                    {
+                        _mySqlConnection = MySqlDataReaderHelper.GetProperty<MySqlConnection>(connection, "InnerConnection");
+                    }
+                }
+                return _mySqlConnection;
+	        }
+	    }
+	    private MySqlConnection _mySqlConnection;
+
+	    /// <summary>
+        /// Override the connection to use a shared connection
+        /// </summary>
+        /// <param name="sharedConnection">Shared MySQL connection</param>
+        internal void SetSharedConnection(
+            IDbConnection sharedConnection)
+        {
+            // Close the unused connection created in the constructor
+            connection.Close();
+
+            // Indicate this connection is now shared
+            _sharedConnection = true;
+
+            // Save the shared connection
+            connection = sharedConnection;
+        }
+
+        /// <summary>
+        /// Closes connection and releases the resource.
+        /// </summary>
+        protected override void FreeManaged()
+        {
+            // Get rid of the shared connection but don't close it! It will be closed later
+            if (_sharedConnection) {
+                connection = null;
+                _sharedConnection = false;
+            }
+            base.FreeManaged();
+        }
 
 		internal static PhpMyDbConnection ValidConnection(PhpResource handle)
 		{
@@ -69,7 +128,7 @@ namespace PHP.Library.Data
 			return null;
 		}
 
-		/// <summary>
+        /// <summary>
 		/// Gets a query result resource.
 		/// </summary>
 		/// <param name="connection">Database connection.</param>
@@ -80,17 +139,22 @@ namespace PHP.Library.Data
 		{
 			return new PhpMyDbResult(connection, reader, convertTypes);
 		}
-		
-    /// <summary>
-    /// Command factory.
-    /// </summary>
-    /// <returns>An empty instance of <see cref="MySqlCommand"/>.</returns>
-    protected override IDbCommand/*!*/ CreateCommand()
-    {
-      return new MySqlCommand();
-    }
-		
-		/// <summary>
+
+	    /// <summary>
+	    /// Command factory.
+	    /// </summary>
+	    /// <returns>An empty instance of <see cref="MySqlCommand"/>.</returns>
+	    protected override IDbCommand /*!*/ CreateCommand()
+	    {
+	        IDbCommand command = connection.CreateCommand();
+	        MySqlLocalConfig local = MySqlConfiguration.GetLocal(_context);
+	        if (local.DefaultCommandTimeout >= 0) {
+	            command.CommandTimeout = local.DefaultCommandTimeout;
+	        }
+	        return command;
+	    }
+
+	    /// <summary>
 		/// Gets last error number.
 		/// </summary>
 		/// <returns>The error number it is known, -1 if unknown error occured, or zero on success.</returns>
@@ -102,15 +166,17 @@ namespace PHP.Library.Data
 		  return (e!=null) ? e.Number : -1;
 		}
 		
-    /// <summary>
+        /// <summary>
 		/// Gets the last error message.
 		/// </summary>
 		/// <returns>The message or an empty string if no error occured.</returns>
 		public override string GetLastErrorMessage()
-    {
-      return StripErrorNumber(base.GetLastErrorMessage());
-    }
-
+        {
+          if (LastException != null && !(LastException is MySqlException)) {
+            return LastException.Message + "\n\n" + LastException.StackTrace;
+          }
+          return StripErrorNumber(base.GetLastErrorMessage());
+        }
 		
 		/// <summary>
 		/// Gets a message from an exception raised by the connector.

@@ -17,6 +17,25 @@ namespace PHP.Library.Data
         private static readonly object locker = new object();
 
         /// <summary>
+        /// Get a property value from an object given it's name and cast to the specific type. 
+        /// </summary>
+        /// <typeparam name="T">Type to convert to</typeparam>
+        /// <param name="src">Source objec to get the property value from</param>
+        /// <param name="propName">Name of the property to read</param>
+        /// <returns>Converted type. Exception on failure</returns>
+        public static T GetProperty<T>(object src, string propName)
+        {
+            try 
+            {
+                return (T)src.GetType().GetProperty(propName).GetValue(src, null);
+            } 
+            catch (Exception e) 
+            {
+                throw new ArgumentException("Unable to get property for type '" + src.GetType().Name + "'", e);
+            }
+        }
+
+        /// <summary>
         /// Generate unprotected (private) field read of ((<typeparamref name="TArg0"/>)<paramref name="arg0"/>).<paramref name="fieldName"/>.
         /// </summary>
         /// <typeparam name="TArg0">Type of object instance.</typeparam>
@@ -59,6 +78,49 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
+        /// Generate unprotected (private) property read of ((<typeparamref name="TArg0"/>)<paramref name="arg0"/>).<paramref name="propertyName"/>.
+        /// </summary>
+        /// <typeparam name="TArg0">Type of object instance.</typeparam>
+        /// <typeparam name="TResult">Type of field type.</typeparam>
+        /// <param name="arg0">Object instance.</param>
+        /// <param name="propertyName">Field name.</param>
+        /// <param name="isPublic">True if the property is public</param>
+        /// <returns>Delegate calling given field load.</returns>
+        private static Func<TArg0, TResult> GenerateUnprotectedPropertyRead<TArg0, TResult>(TArg0/*!*/arg0, string propertyName, bool isPublic)
+        {
+            try
+            {
+                // type of instance:
+                Type argType = arg0.GetType();
+
+                // obtain required property:
+                var prop = argType.GetProperty(propertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                Debug.Assert(prop != null, "!" + propertyName);
+                Debug.Assert(
+                    typeof(TResult).IsAssignableFrom(prop.PropertyType) ||
+                    (prop.PropertyType.IsEnum && typeof(TResult).IsAssignableFrom(prop.PropertyType.GetEnumUnderlyingType())),
+                    propertyName + ".PropertyType must be assignable to " + typeof(TResult).Name);
+
+                // create dynamic method with skipped JIT visibility checks:
+                var getter = new DynamicMethod("get_" + propertyName + "#1", typeof(TResult), new Type[] { typeof(TArg0) }, true);
+                var il = getter.GetILGenerator();
+
+                // return ((argType)<arg0>).<propertyName>;
+                il.Emit(OpCodes.Ldarg_0);   // <arg0>
+                il.Emit(OpCodes.Castclass, argType);    // (TArg0)<arg0>
+                il.Emit(OpCodes.Call, prop.GetGetMethod(!isPublic));
+                il.Emit(OpCodes.Ret);
+
+                //
+                return (Func<TArg0, TResult>)getter.CreateDelegate(typeof(Func<TArg0, TResult>));
+            }
+            catch
+            {
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Make <paramref name="reader"/>.resultSet unprotected read.
         /// </summary>
         /// <param name="reader"></param>
@@ -70,7 +132,7 @@ namespace PHP.Library.Data
             if (resultSetMethod == null)
                 lock (locker)
                     if (resultSetMethod == null)
-                        resultSetMethod = GenerateUnprotectedFieldRead<MySqlDataReader, object>(reader, "resultSet");
+                        resultSetMethod = GenerateUnprotectedPropertyRead<MySqlDataReader, object>(reader, "ResultSet", false);
 
             return resultSetMethod(reader);
         }
@@ -92,8 +154,8 @@ namespace PHP.Library.Data
                         try
                         {
                             Type ResultSetType = resultSet.GetType();
-                            var fieldsFld = ResultSetType.GetField("fields", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                            Debug.Assert(fieldsFld != null, "!fieldsFld");
+                            var fieldsProp = ResultSetType.GetProperty("Fields", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                            Debug.Assert(fieldsProp != null, "!fieldsProp");
 
                             var getter = new DynamicMethod("get_Fields[]#1", typeof(object), new Type[] { typeof(object), typeof(int) }, true);
                             var il = getter.GetILGenerator();
@@ -101,7 +163,7 @@ namespace PHP.Library.Data
                             // return <resultSet>.fields[<index>]
                             il.Emit(OpCodes.Ldarg_0);   // <resultSet>
                             il.Emit(OpCodes.Castclass, ResultSetType);
-                            il.Emit(OpCodes.Ldfld, fieldsFld);  // .fields
+                            il.Emit(OpCodes.Call, fieldsProp.GetGetMethod());
                             il.Emit(OpCodes.Ldarg_1);   // <index>
                             il.Emit(OpCodes.Ldelem, typeof(object));    // []
                             il.Emit(OpCodes.Ret);
@@ -130,7 +192,7 @@ namespace PHP.Library.Data
             if (colFlagsMethod == null)
                 lock (locker)
                     if (colFlagsMethod == null)
-                        colFlagsMethod = GenerateUnprotectedFieldRead<object, int>(mysqlfield, "colFlags");
+                        colFlagsMethod = GenerateUnprotectedPropertyRead<object, int>(mysqlfield, "Flags", true);
 
             return (ColumnFlags)colFlagsMethod(mysqlfield);
         }
@@ -184,7 +246,7 @@ namespace PHP.Library.Data
             if (maxLengthMethod == null)
                 lock (locker)
                     if (maxLengthMethod == null)
-                        maxLengthMethod = GenerateUnprotectedFieldRead<object, int>(mysqlfield, "maxLength");
+                        maxLengthMethod = GenerateUnprotectedPropertyRead<object, int>(mysqlfield, "MaxLength", true);
 
             return maxLengthMethod(mysqlfield);
         }

@@ -172,7 +172,7 @@ namespace PHP.Library.Data
     #endregion
 
     /// <summary>
-    /// MSSQL extension configuration.
+    /// MySQL extension configuration.
     /// </summary>
     public sealed class MySqlConfiguration
     {
@@ -309,6 +309,19 @@ namespace PHP.Library.Data
             {
                 return (MySqlGlobalConfig)Configuration.Global.GetLibraryConfig(MySqlLibraryDescriptor.Singleton);
             }
+        }
+
+        /// <summary>
+        /// Gets local configuration associated with a specified script context.
+        /// </summary>
+        /// <param name="context">Scritp context.</param>
+        /// <returns>Local library configuration.</returns>
+        public static MySqlLocalConfig GetLocal(ScriptContext/*!*/ context)
+        {
+            if (context == null)
+                throw new ArgumentNullException("context");
+
+            return (MySqlLocalConfig)context.Config.GetLibraryConfig(MySqlLibraryDescriptor.Singleton);
         }
 
         #endregion

@@ -29,3 +29,9 @@
 *.vspscc
 .builds
 *.dotCover
+Deployment/Bin/*.xml
+Deployment/Debug/*.xml
+Extension/bin/
+Extension/obj/
+PDOMySQL/bin/
+PDOMySQL/obj/
