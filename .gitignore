@@ -30,8 +30,11 @@
 .builds
 *.dotCover
 Deployment/Bin/*.xml
+Deployment/Bin/*.config
 Deployment/Debug/*.xml
+Deployment/Debug/*.config
 Extension/bin/
 Extension/obj/
 PDOMySQL/bin/
 PDOMySQL/obj/
+Packages/*

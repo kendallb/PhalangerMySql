@@ -72,7 +72,7 @@ namespace PHP.Library.Data
                 // TODO: process argdriver_options
             }
 
-            var con = new PDOConnection(csb.GetConnectionString(true), new MySqlConnection(), "PDO mysql connection");
+            var con = new PDOConnection(csb.ConnectionString, new MySqlConnection(), "PDO mysql connection");
             con.Connect();            
             return con;
         }
