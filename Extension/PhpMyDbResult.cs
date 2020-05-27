@@ -13,9 +13,11 @@
 
 using System;
 using System.Data;
+using System.Data.Common;
 using System.Data.SqlClient;
 using System.Data.SqlTypes;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 
 using MySql.Data.MySqlClient;
@@ -31,27 +33,6 @@ namespace PHP.Library.Data
 	/// </summary>
     public sealed class PhpMyDbResult : PhpDbResult
     {
-        /// <summary>
-        /// Custom data associated with single field in row. Created by <see cref="GetCustomData"/> method when data are loaded.
-        /// </summary>
-        public class FieldCustomData
-        {
-            /// <summary>
-            /// see Field[i].RealTableName
-            /// </summary>
-            public string RealTableName;
-
-            /// <summary>
-            /// see Field[i].corflags
-            /// </summary>
-            public ColumnFlags Flags;
-
-            /// <summary>
-            /// see Result.GetColumnSize(i)
-            /// </summary>
-            public int ColumnSize;
-        }
-
         /// <summary>
         /// Creates an instance of a result resource.
         /// </summary>
@@ -105,27 +86,7 @@ namespace PHP.Library.Data
             return oa;
         }
 
-        /// <summary>
-        /// Gets the underlying MySql data reader from the reader. We specifically support the case where
-        /// the reader is a wrapped reader such as we get from Glimpse, and we look for InnerDataReader to 
-        /// find the native MySqlDataReader when we need it.
-        /// </summary>
-        internal MySqlDataReader MySqlDataReader
-        {
-            get
-            {
-                if (_mySqlDataReader == null) 
-                {
-                    _mySqlDataReader = Reader as MySqlDataReader;
-                    if (_mySqlDataReader == null)
-                    {
-                        _mySqlDataReader = MySqlDataReaderHelper.GetProperty<MySqlDataReader>(Reader, "InnerDataReader");
-                    }
-                }
-                return _mySqlDataReader;
-            }
-        }
-        private MySqlDataReader _mySqlDataReader;
+        public new MySqlDataReader Reader => (MySqlDataReader)base.Reader;
 
         /// <summary>
         /// Collect additional information about current row of Reader.
@@ -133,25 +94,7 @@ namespace PHP.Library.Data
         /// <returns>An array of <see cref="FieldCustomData"/>.</returns>
         protected override object GetCustomData()
         {
-            MySqlDataReader my_reader = MySqlDataReader;
-
-            var data = new FieldCustomData[my_reader.FieldCount];
-
-            var resultset = MySqlDataReaderHelper.ResultSet(my_reader);
-
-            for (int i = 0; i < my_reader.FieldCount; i++)
-            {
-                var field = MySqlDataReaderHelper.fields_index(resultset, i);
-
-                data[i] = new FieldCustomData()
-                {
-                    Flags = MySqlDataReaderHelper.colFlags(field), //my_reader.GetFieldFlags(i),
-                    RealTableName = MySqlDataReaderHelper.RealTableName(field), //my_reader.GetRealTableName(i),
-                    ColumnSize = MySqlDataReaderHelper.GetColumnSize(field) //my_reader.GetColumnSize(i)
-                };
-            }
-
-            return data;
+            return Reader.FieldCount != 0 ? (IReadOnlyList<DbColumn>)Reader.GetColumnSchema() : Array.Empty<DbColumn>();
         }
 
         /// <summary>
@@ -236,38 +179,6 @@ namespace PHP.Library.Data
                 return value.ToString("yyyy-MM-dd");
             else
                 return value.ToString("yyyy-MM-dd HH:mm:ss");
-        }
-
-        /// <summary>
-        /// Gets flags of the current field.
-        /// </summary>
-        /// <returns>The field length.</returns>
-        public ColumnFlags GetFieldFlags()
-        {
-            return GetFieldFlags(CurrentFieldIndex);
-        }
-
-        /// <summary>
-        /// Gets flags of a specified field.
-        /// </summary>
-        /// <param name="fieldIndex">An index of the field.</param>
-        /// <returns>The field length or 0.</returns>
-        public ColumnFlags GetFieldFlags(int fieldIndex)
-        {
-            if (!CheckFieldIndex(fieldIndex)) return 0;
-            return MySqlDataReaderHelper.colFlags(MySqlDataReaderHelper.fields_index(MySqlDataReaderHelper.ResultSet((MySqlDataReader)Reader), fieldIndex));  // ((MySqlDataReader)Reader).GetFieldFlags(fieldIndex);
-        }
-
-        /// <summary>
-        /// field RealTableName
-        /// </summary>
-        /// <param name="fieldIndex"></param>
-        /// <returns></returns>
-        public string GetRealTableName(int fieldIndex)
-        {
-            if (!CheckFieldIndex(fieldIndex)) return null;
-
-            return MySqlDataReaderHelper.RealTableName(MySqlDataReaderHelper.fields_index(MySqlDataReaderHelper.ResultSet((MySqlDataReader)Reader), fieldIndex));  //((MySqlDataReader)Reader).GetRealTableName(fieldIndex);
         }
 
         /// <summary>

@@ -156,7 +156,6 @@
     <Compile Include="MySql.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MySql.Data.cs" />
     <Compile Include="PhpMyDbConnection.cs">
       <SubType>Code</SubType>
     </Compile>
