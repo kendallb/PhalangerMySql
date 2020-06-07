@@ -69,18 +69,9 @@ namespace PHP.Library.Data
 	    {
 	        get
 	        {
-	            if (_mySqlConnection == null) 
-                {
-                    _mySqlConnection = connection as MySqlConnection;
-                    if (_mySqlConnection == null) 
-                    {
-                        _mySqlConnection = MySqlDataReaderHelper.GetProperty<MySqlConnection>(connection, "InnerConnection");
-                    }
-                }
-                return _mySqlConnection;
-	        }
+				return connection as MySqlConnection;
+			}
 	    }
-	    private MySqlConnection _mySqlConnection;
 
 	    /// <summary>
         /// Override the connection to use a shared connection
