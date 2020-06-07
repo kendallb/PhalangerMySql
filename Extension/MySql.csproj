@@ -100,15 +100,15 @@
   <ItemGroup>
     <Reference Include="PhpNetClassLibrary, Version=4.0.0.0, Culture=neutral, PublicKeyToken=4af37afe3cde05fb, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\amain\ExternalAssemblies\Phalanger\PhpNetClassLibrary.dll</HintPath>
+      <HintPath>..\..\..\snap\ExternalAssemblies\Phalanger\PhpNetClassLibrary.dll</HintPath>
     </Reference>
     <Reference Include="PhpNetCore, Version=4.0.0.0, Culture=neutral, PublicKeyToken=0a8e8c4c76728c71, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\amain\ExternalAssemblies\Phalanger\PhpNetCore.dll</HintPath>
+      <HintPath>..\..\..\snap\ExternalAssemblies\Phalanger\PhpNetCore.dll</HintPath>
     </Reference>
     <Reference Include="PhpNetCore.Parsers, Version=4.0.0.0, Culture=neutral, PublicKeyToken=0a8e8c4c76728c71, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\amain\ExternalAssemblies\Phalanger\PhpNetCore.Parsers.dll</HintPath>
+      <HintPath>..\..\..\snap\ExternalAssemblies\Phalanger\PhpNetCore.Parsers.dll</HintPath>
     </Reference>
     <Reference Include="System">
       <Name>System</Name>
