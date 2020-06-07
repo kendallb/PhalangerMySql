@@ -228,8 +228,10 @@ namespace PHP.Library.Data
             bool success;
             PhpMyDbConnection connection = (PhpMyDbConnection)manager.OpenConnection(connectionString, false, MySqlConfiguration.Global.MaxConnections, out success);
 
-            if (!success) {
-                if (connection != null) {
+            if (!success)
+            {
+                if (connection != null)
+                {
                     UpdateConnectErrorInfo(connection);
                     connection = null;
                 }
@@ -1290,7 +1292,7 @@ namespace PHP.Library.Data
         {
             PhpMyDbResult result = PhpMyDbResult.ValidResult(resultHandle);
             if (result == null) return null;
-            
+
             ColumnFlags flags = result.GetFieldFlags(fieldIndex);
             string type_name = result.GetPhpFieldType(fieldIndex);
 
