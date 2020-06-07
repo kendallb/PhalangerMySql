@@ -13,9 +13,7 @@
 
 using System;
 using System.Data;
-using System.Data.Common;
-using System.Data.SqlClient;
-using System.Data.SqlTypes;
+using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -24,7 +22,7 @@ using MySql.Data.MySqlClient;
 using MySql.Data.Types;
 
 using PHP.Core;
-using System.Diagnostics;
+using System.Data.Common;
 
 namespace PHP.Library.Data
 {
@@ -33,6 +31,12 @@ namespace PHP.Library.Data
 	/// </summary>
     public sealed class PhpMyDbResult : PhpDbResult
     {
+        public new MySqlCommand Command => (MySqlCommand)base.Command;
+
+        public new MySqlDataReader Reader => (MySqlDataReader)base.Reader;
+
+        //public new PhpMyDbConnection Connection => (PhpMyDbConnection)base.Connection;
+
         /// <summary>
         /// Creates an instance of a result resource.
         /// </summary>
@@ -63,38 +67,55 @@ namespace PHP.Library.Data
         /// <returns>Row data.</returns>
         protected override object[] GetValues(string[] dataTypes, bool convertTypes)
         {
-            IDataReader reader = Reader;
-
-            object[] oa = new object[reader.FieldCount];
+            var my_reader = Reader;
+            var oa = new object[my_reader.FieldCount];
             
             if (convertTypes)
             {
                 Debug.Assert(dataTypes.Length >= oa.Length);
                 for (int i = 0; i < oa.Length; i++)
                 {
-                    oa[i] = ConvertDbValue(dataTypes[i], reader.GetValue(i));
+                    oa[i] = ConvertDbValue(dataTypes[i], my_reader.GetValue(i));
                 }
             }
             else
             {
                 for (int i = 0; i < oa.Length; i++)
                 {
-                    oa[i] = reader.GetValue(i);
+                    oa[i] = my_reader.GetValue(i);
                 }
             }
 
             return oa;
         }
 
-        public new MySqlDataReader Reader => (MySqlDataReader)base.Reader;
+        /// <summary>
+        /// The elements are of type <see cref="MySqlDbColumn"/>.
+        /// </summary>
+        public IReadOnlyList<DbColumn> ColumnSchema => (IReadOnlyList<DbColumn>)GetRowCustomData();
+
+        public MySqlDbColumn GetColumnSchema(int fieldIndex) => CheckFieldIndex(fieldIndex) ? (MySqlDbColumn)ColumnSchema[fieldIndex] : null;
 
         /// <summary>
         /// Collect additional information about current row of Reader.
         /// </summary>
-        /// <returns>An array of <see cref="FieldCustomData"/>.</returns>
         protected override object GetCustomData()
         {
             return Reader.FieldCount != 0 ? (IReadOnlyList<DbColumn>)Reader.GetColumnSchema() : Array.Empty<DbColumn>();
+        }
+
+        public override int GetFieldLength(int fieldIndex)
+        {
+            if (CheckFieldIndex(fieldIndex))
+            {
+                var size = ColumnSchema[fieldIndex].ColumnSize;
+                if (size.HasValue)
+                {
+                    return size.Value;
+                }
+            }
+
+            return -1;
         }
 
         /// <summary>
