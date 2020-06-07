@@ -1290,7 +1290,7 @@ namespace PHP.Library.Data
         {
             PhpMyDbResult result = PhpMyDbResult.ValidResult(resultHandle);
             if (result == null) return null;
-
+            
             ColumnFlags flags = result.GetFieldFlags(fieldIndex);
             string type_name = result.GetPhpFieldType(fieldIndex);
 
@@ -1377,30 +1377,62 @@ namespace PHP.Library.Data
 
             Debug.Assert(result.GetRowCustomData() != null);
 
-            string php_type = result.GetPhpFieldType(fieldIndex);
-            PhpMyDbResult.FieldCustomData data = ((PhpMyDbResult.FieldCustomData[])result.GetRowCustomData())[fieldIndex];
-            ColumnFlags flags = data.Flags;//result.GetFieldFlags(fieldIndex);
+            var col = result.GetColumnSchema(fieldIndex);
+            var php_type = result.GetPhpFieldType(fieldIndex);
+
+            //PhpMyDbResult.FieldCustomData data = ((PhpMyDbResult.FieldCustomData[])result.GetRowCustomData())[fieldIndex];
+            //ColumnFlags flags = data.Flags;//result.GetFieldFlags(fieldIndex);
+
+            //name - column name
+            //table - name of the table the column belongs to, which is the alias name if one is defined
+            //max_length - maximum length of the column
+            //not_null - 1 if the column cannot be NULL
+            //primary_key - 1 if the column is a primary key
+            //unique_key - 1 if the column is a unique key
+            //multiple_key - 1 if the column is a non - unique key
+            //numeric - 1 if the column is numeric
+            //blob - 1 if the column is a BLOB
+            //type - the type of the column
+            //unsigned - 1 if the column is unsigned
+            //zerofill - 1 if the column is zero - filled
 
             // create an array of runtime fields with specified capacity:
-            var objFields = new PhpArray(13);
+            var objFields = new PhpArray(16)
+            {
+                { "name", col.ColumnName },
+                //{ "orgname", col.BaseColumnName },
+                { "table", col.BaseTableName ?? string.Empty },
+                //{ "def", "" }, // undocumented
+                //{ "db", col.BaseSchemaName },
+                //{ "catalog", col.BaseCatalogName },
+                //{ "max_length", /*result.GetFieldLength(fieldIndex)*/data.ColumnSize },
+                //{ "length", col.ColumnSize.GetValueOrDefault() },
+                { "not_null", col.AllowDBNull.GetValueOrDefault() == false },
+                { "primary_key", col.IsKey == true ? 1 : 0 },
+                //{ "multiple_key", ((flags & ColumnFlags.MULTIPLE_KEY) != 0) /*((bool)info["IsMultipleKey"])*/ ? 1 : 0 },
+                { "unique_key", col.IsUnique.GetValueOrDefault() ? 1 : 0 },
+                { "numeric", /*col.IsNumeric()*/col.IsNumeric() ? 1 : 0 },
+                { "blob", col.IsBlob() ? 1 : 0 },
+                { "type", php_type },
+                { "unsigned", col.IsUnsigned() ? 1 : 0 }, // ((flags & ColumnFlags.UNSIGNED) != 0) /*((bool)info["IsUnsigned"])*/ ? 1 : 0 },
+                //{ "zerofill", ((flags & ColumnFlags.ZERO_FILL) != 0) /*((bool)info["ZeroFill"])*/ ? 1 : 0 },
+            };
 
-            // add fields into the hastable directly:
-            // no duplicity check, since array is already valid
-            objFields.Add("name", result.GetFieldName(fieldIndex));
-            objFields.Add("table", (/*info["BaseTableName"] as string*/data.RealTableName) ?? string.Empty);
-            objFields.Add("def", ""); // TODO
-            objFields.Add("max_length", /*result.GetFieldLength(fieldIndex)*/data.ColumnSize);
+            //objFields.Add("name", col.ColumnName);
+            //objFields.Add("table", (/*info["BaseTableName"] as string*/data.RealTableName) ?? string.Empty);
+            //objFields.Add("def", ""); // TODO
+            //objFields.Add("max_length", /*result.GetFieldLength(fieldIndex)*/data.ColumnSize);
 
-            objFields.Add("not_null", ((flags & ColumnFlags.NOT_NULL) != 0) /*(!(bool)info["AllowDBNull"])*/ ? 1 : 0);
-            objFields.Add("primary_key", ((flags & ColumnFlags.PRIMARY_KEY) != 0) /*((bool)info["IsKey"])*/ ? 1 : 0);
-            objFields.Add("multiple_key", ((flags & ColumnFlags.MULTIPLE_KEY) != 0) /*((bool)info["IsMultipleKey"])*/ ? 1 : 0);
-            objFields.Add("unique_key", ((flags & ColumnFlags.UNIQUE_KEY) != 0) /*((bool)info["IsUnique"])*/ ? 1 : 0);
-            objFields.Add("numeric", result.IsNumericType(php_type) ? 1 : 0);
-            objFields.Add("blob", ((flags & ColumnFlags.BLOB) != 0) /*((bool)info["IsBlob"])*/ ? 1 : 0);
+            //objFields.Add("not_null", ((flags & ColumnFlags.NOT_NULL) != 0) /*(!(bool)info["AllowDBNull"])*/ ? 1 : 0);
+            //objFields.Add("primary_key", ((flags & ColumnFlags.PRIMARY_KEY) != 0) /*((bool)info["IsKey"])*/ ? 1 : 0);
+            //objFields.Add("multiple_key", ((flags & ColumnFlags.MULTIPLE_KEY) != 0) /*((bool)info["IsMultipleKey"])*/ ? 1 : 0);
+            //objFields.Add("unique_key", ((flags & ColumnFlags.UNIQUE_KEY) != 0) /*((bool)info["IsUnique"])*/ ? 1 : 0);
+            //objFields.Add("numeric", result.IsNumericType(php_type) ? 1 : 0);
+            //objFields.Add("blob", ((flags & ColumnFlags.BLOB) != 0) /*((bool)info["IsBlob"])*/ ? 1 : 0);
 
-            objFields.Add("type", php_type);
-            objFields.Add("unsigned", ((flags & ColumnFlags.UNSIGNED) != 0) /*((bool)info["IsUnsigned"])*/ ? 1 : 0);
-            objFields.Add("zerofill", ((flags & ColumnFlags.ZERO_FILL) != 0) /*((bool)info["ZeroFill"])*/ ? 1 : 0);
+            //objFields.Add("type", php_type);
+            //objFields.Add("unsigned", ((flags & ColumnFlags.UNSIGNED) != 0) /*((bool)info["IsUnsigned"])*/ ? 1 : 0);
+            //objFields.Add("zerofill", ((flags & ColumnFlags.ZERO_FILL) != 0) /*((bool)info["ZeroFill"])*/ ? 1 : 0);
 
             // create new stdClass with runtime fields initialized above:
             return new stdClass()
