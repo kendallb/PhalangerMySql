@@ -1293,51 +1293,54 @@ namespace PHP.Library.Data
             PhpMyDbResult result = PhpMyDbResult.ValidResult(resultHandle);
             if (result == null) return null;
 
-            ColumnFlags flags = result.GetFieldFlags(fieldIndex);
-            string type_name = result.GetPhpFieldType(fieldIndex);
+            var col = result.GetColumnSchema(fieldIndex);
+            //ColumnFlags flags = result.GetFieldFlags(fieldIndex);
+            //string type_name = result.GetPhpFieldType(fieldIndex);
 
             StringBuilder str_fields = new StringBuilder();
 
-            if ((flags & ColumnFlags.NOT_NULL) != 0)
-                str_fields.Append("not_null ");
+            var flags = new List<string>(16);
 
-            if ((flags & ColumnFlags.PRIMARY_KEY) != 0)
-                str_fields.Append("primary_key ");
+            if (col.AllowDBNull == false)
+                flags.Add("not_null");
 
-            if ((flags & ColumnFlags.UNIQUE_KEY) != 0)
-                str_fields.Append("unique_key ");
+            if (col.IsKey == true)
+                flags.Add("primary_key");
 
-            if ((flags & ColumnFlags.MULTIPLE_KEY) != 0)
-                str_fields.Append("multiple_key ");
+            if (col.IsUnique == true)
+                flags.Add("unique_key");
 
-            if ((flags & ColumnFlags.BLOB) != 0)
-                str_fields.Append("blob ");
+            //if ((flags & ColumnFlags.MULTIPLE_KEY) != 0)
+            //    flags.Add("multiple_key");
 
-            if ((flags & ColumnFlags.UNSIGNED) != 0)
-                str_fields.Append("unsigned ");
+            if (col.IsBlob())
+                flags.Add("blob");
 
-            if ((flags & ColumnFlags.ZERO_FILL) != 0)
-                str_fields.Append("zerofill ");
+            if (col.IsUnsigned())
+                flags.Add("unsigned");
 
-            if ((flags & ColumnFlags.BINARY) != 0)
-                str_fields.Append("binary ");
+            //if ((flags & ColumnFlags.ZERO_FILL) != 0)
+            //    flags.Add("zerofill");
 
-            if ((flags & ColumnFlags.ENUM) != 0)
-                str_fields.Append("enum ");
+            if (col.ProviderType == MySqlDbType.Binary || col.ProviderType == MySqlDbType.VarBinary)
+                flags.Add("binary");
 
-            if ((flags & ColumnFlags.SET) != 0)
-                str_fields.Append("set ");
+            if (col.ProviderType == MySqlDbType.Enum)
+                flags.Add("enum");
 
-            if ((flags & ColumnFlags.AUTO_INCREMENT) != 0)
-                str_fields.Append("auto_increment ");
+            if (col.ProviderType == MySqlDbType.Set)
+                flags.Add("set");
 
-            if ((flags & ColumnFlags.TIMESTAMP) != 0)
-                str_fields.Append("timestamp ");
+            if (col.IsAutoIncrement.GetValueOrDefault())
+                flags.Add("auto_increment");
+
+            if (col.ProviderType == MySqlDbType.Timestamp)
+                flags.Add("timestamp");
 
             if (str_fields.Length > 0)
                 str_fields.Length = str_fields.Length - 1;
 
-            return str_fields.ToString();
+            return string.Join(" ", flags);
         }
 
         /// <summary>
