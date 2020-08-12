@@ -1,24 +1,19 @@
 /*
 
- Copyright (c) 2005-2006 Tomas Matousek.  
+ Copyright (c) 2005-2006 Tomas Matousek.
 
  This software is distributed under GNU General Public License version 2.
- The use and distribution terms for this software are contained in the file named LICENSE, 
- which can be found in the same directory as this file. By using this software 
+ The use and distribution terms for this software are contained in the file named LICENSE,
+ which can be found in the same directory as this file. By using this software
  in any fashion, you are agreeing to be bound by the terms of this license.
- 
+
  You must not remove this notice from this software.
 
 */
 
 using System;
-using System.Text;
 using System.Data;
-using System.Data.SqlClient;
-using System.Diagnostics;
-
-using MySql.Data.MySqlClient;
-
+using MySqlConnector;
 using PHP.Core;
 
 namespace PHP.Library.Data
@@ -30,7 +25,7 @@ namespace PHP.Library.Data
             return new PhpMyDbConnection(connectionString, ScriptContext.CurrentContext);
         }
     }
-	
+
 	/// <summary>
 	/// Summary description for PhpMyDbConnection.
 	/// </summary>
@@ -38,20 +33,20 @@ namespace PHP.Library.Data
 	{
         private readonly ScriptContext/*!*/ _context;
         private bool _sharedConnection;
-		
+
 		/// <summary>
 		/// Server.
 		/// </summary>
 		public string/*!*/ Server { get { return server; } }
 		private string/*!*/ server;
 		internal void SetServer(string/*!*/ value) { server = value; }
-		
+
 		/// <summary>
 		/// Creates a connection resource.
 		/// </summary>
         /// <param name="connectionString">Connection string.</param>
         /// <param name="context">Script context associated with the connection.</param>
-        public PhpMyDbConnection(string/*!*/ connectionString, ScriptContext/*!*/ context) 
+        public PhpMyDbConnection(string/*!*/ connectionString, ScriptContext/*!*/ context)
 		: base(connectionString, new MySqlConnection(), "mysql connection")
 		{
             if (context == null)
@@ -62,7 +57,7 @@ namespace PHP.Library.Data
 
 	    /// <summary>
 	    /// Gets the underlying MySql connection from the connection. We specifically support the case where
-	    /// the connection is a wrapped connection such as we get from Glimpse, and we look for InnerConnection to 
+	    /// the connection is a wrapped connection such as we get from Glimpse, and we look for InnerConnection to
 	    /// find the native MySqlConnection when we need it.
 	    /// </summary>
 	    internal MySqlConnection MySqlConnection
@@ -111,10 +106,10 @@ namespace PHP.Library.Data
                 connection = (PhpMyDbConnection)handle;
             else
                 connection = null;
-            
+
             if (connection != null && connection.IsValid)
                 return connection;
-			
+
 			PhpException.Throw(PhpError.Warning, LibResources.GetString("invalid_connection_resource"));
 			return null;
 		}
@@ -152,11 +147,11 @@ namespace PHP.Library.Data
 		public override int GetLastErrorNumber()
 		{
 		  if (LastException==null) return 0;
-		  
+
 		  MySqlException e = LastException as MySqlException;
 		  return (e!=null) ? e.Number : -1;
 		}
-		
+
         /// <summary>
 		/// Gets the last error message.
 		/// </summary>
@@ -168,7 +163,7 @@ namespace PHP.Library.Data
           }
           return StripErrorNumber(base.GetLastErrorMessage());
         }
-		
+
 		/// <summary>
 		/// Gets a message from an exception raised by the connector.
 		/// Removes the initial #{number} and the ending dot.
@@ -179,19 +174,19 @@ namespace PHP.Library.Data
 		public override string GetExceptionMessage(Exception/*!*/ e)
 		{
 		  if (e == null) throw new ArgumentNullException("e");
-		  
+
 		  MySqlException mye = e as MySqlException;
 		  if (mye == null || mye.Message.Length == 0) return e.Message;
-		  
+
 		  string msg = StripErrorNumber(mye.Message);
-		  
+
 		  // skip last dot:
 		  int j = msg.Length;
 		  if (msg[j-1] == '.') j--;
-		  
+
 		  return String.Format("{0} (error {1})", msg.Substring(0, j), mye.Number);
-		}		
-		
+		}
+
 		private string StripErrorNumber(string msg)
 		{
 		  // find first non-digit:
@@ -200,13 +195,13 @@ namespace PHP.Library.Data
 		    int i = 1;
 		    while (i < msg.Length && msg[i] >= '0' && msg[i] <= '9') i++;
 		    return msg.Substring(i);
-		  } 
+		  }
 		  else
 		  {
 		    return msg;
-		  } 
+		  }
 		}
-		
+
 		/// <summary>
 		/// Queries server for a value of a global variable.
 		/// </summary>
@@ -215,13 +210,13 @@ namespace PHP.Library.Data
 		internal object QueryGlobalVariable(string name)
 		{
       // TODO: better query:
-      
+
       PhpDbResult result = ExecuteQuery("SHOW GLOBAL VARIABLES LIKE '" + name + "'",true);
-    
+
       // default value
       if (result.FieldCount != 2 || result.RowCount != 1)
         return null;
-        
+
       return result.GetFieldValue(0,1);
     }
 	}

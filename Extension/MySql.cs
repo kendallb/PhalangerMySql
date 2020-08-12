@@ -1,12 +1,12 @@
 /*
 
- Copyright (c) 2005-2006 Tomas Matousek.  
+ Copyright (c) 2005-2006 Tomas Matousek.
 
  This software is distributed under GNU General Public License version 2.
- The use and distribution terms for this software are contained in the file named LICENSE, 
- which can be found in the same directory as this file. By using this software 
+ The use and distribution terms for this software are contained in the file named LICENSE,
+ which can be found in the same directory as this file. By using this software
  in any fashion, you are agreeing to be bound by the terms of this license.
- 
+
  You must not remove this notice from this software.
 
 */
@@ -16,9 +16,8 @@ using System.Data;
 using System.Diagnostics;
 using System.Text;
 using System.Linq;
-using MySql.Data.MySqlClient;
 using System.Collections.Generic;
-
+using MySqlConnector;
 using PHP.Core;
 using PHP.Core.Reflection;
 
@@ -268,7 +267,7 @@ namespace PHP.Library.Data
         /// </returns>
         /// <remarks>
         /// Default values are taken from the configuration.
-        /// </remarks>		
+        /// </remarks>
         [ImplementsFunction("mysql_connect")]
         [return: CastToFalse]
         public static PhpResource Connect(string server)
@@ -286,7 +285,7 @@ namespace PHP.Library.Data
         /// </returns>
         /// <remarks>
         /// Default values are taken from the configuration.
-        /// </remarks>		
+        /// </remarks>
         [ImplementsFunction("mysql_connect")]
         [return: CastToFalse]
         public static PhpResource Connect(string server, string user)
@@ -305,7 +304,7 @@ namespace PHP.Library.Data
         /// </returns>
         /// <remarks>
         /// Default values are taken from the configuration.
-        /// </remarks>		
+        /// </remarks>
         [ImplementsFunction("mysql_connect")]
         [return: CastToFalse]
         public static PhpResource Connect(string server, string user, string password)
@@ -325,7 +324,7 @@ namespace PHP.Library.Data
         /// </returns>
         /// <remarks>
         /// Default values are taken from the configuration.
-        /// </remarks>		
+        /// </remarks>
         [ImplementsFunction("mysql_connect")]
         [return: CastToFalse]
         public static PhpResource Connect(string server, string user, string password, bool newLink)
@@ -346,7 +345,7 @@ namespace PHP.Library.Data
         /// </returns>
         /// <remarks>
         /// Default values are taken from the configuration.
-        /// </remarks>		
+        /// </remarks>
         [ImplementsFunction("mysql_connect")]
         [return: CastToFalse]
         public static PhpResource Connect(string server, string user, string password, bool newLink, ConnectFlags flags)
@@ -363,7 +362,7 @@ namespace PHP.Library.Data
         /// </returns>
         /// <remarks>
         /// Default values are taken from the configuration.
-        /// </remarks>		
+        /// </remarks>
         [ImplementsFunction("mysql_pconnect")]
         [return: CastToFalse]
         public static PhpResource PersistentConnect()
@@ -379,9 +378,9 @@ namespace PHP.Library.Data
         /// Resource representing the connection or a <B>null</B> reference (<B>false</B> in PHP) on failure.
         /// </returns>
         /// <remarks>
-        /// Default values are taken from the configuration. 
+        /// Default values are taken from the configuration.
         /// Creates a non-persistent connection. Persistent connections are not supported.
-        /// </remarks>				
+        /// </remarks>
         [ImplementsFunction("mysql_pconnect")]
         [return: CastToFalse]
         public static PhpResource PersistentConnect(string server)
@@ -400,7 +399,7 @@ namespace PHP.Library.Data
         /// <remarks>
         /// Default values are taken from the configuration.
         /// Creates a non-persistent connection. Persistent connections are not supported.
-        /// </remarks>			
+        /// </remarks>
         [ImplementsFunction("mysql_pconnect")]
         [return: CastToFalse]
         public static PhpResource PersistentConnect(string server, string user)
@@ -420,7 +419,7 @@ namespace PHP.Library.Data
         /// <remarks>
         /// Default values are taken from the configuration.
         /// Creates a non-persistent connection. Persistent connections are not supported.
-        /// </remarks>			
+        /// </remarks>
         [ImplementsFunction("mysql_pconnect")]
         [return: CastToFalse]
         public static PhpResource PersistentConnect(string server, string user, string password)
@@ -441,7 +440,7 @@ namespace PHP.Library.Data
         /// <remarks>
         /// Default values are taken from the configuration.
         /// Creates a non-persistent connection. Persistent connections are not supported.
-        /// </remarks>		
+        /// </remarks>
         [ImplementsFunction("mysql_pconnect")]
         [return: CastToFalse]
         public static PhpResource PersistentConnect(string server, string user, string password, bool newLink)
@@ -463,7 +462,7 @@ namespace PHP.Library.Data
         /// <remarks>
         /// Default values are taken from the configuration.
         /// Creates a non-persistent connection. Persistent connections are not supported.
-        /// </remarks>		
+        /// </remarks>
         [ImplementsFunction("mysql_pconnect")]
         [return: CastToFalse]
         public static PhpResource PersistentConnect(string server, string user, string password, bool newLink, ConnectFlags flags)
@@ -765,7 +764,7 @@ namespace PHP.Library.Data
                 else if (lastQuote < 0)
                 {
                     // escaped = false
-                    // 
+                    //
                     byte bnext = ((i + 1) < query.Length) ? query[i + 1] : (byte)0;
                     if (b == '/' && bnext == '*') // /*
                     {
@@ -907,7 +906,7 @@ namespace PHP.Library.Data
         #region mysql_fetch_row, mysql_fetch_assoc, mysql_fetch_array, mysql_fetch_object
 
         /// <summary>
-        /// Get a result row as an integer indexed array. 
+        /// Get a result row as an integer indexed array.
         /// </summary>
         /// <param name="resultHandle">Query result resource.</param>
         /// <returns>Array indexed by integers starting from 0 containing values of the current row.</returns>
@@ -919,7 +918,7 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
-        /// Get a result row as an associative array. 
+        /// Get a result row as an associative array.
         /// </summary>
         /// <param name="resultHandle">Query result resource.</param>
         /// <returns>Array indexed by column names containing values of the current row.</returns>
@@ -930,7 +929,7 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
-        /// Get a result row as an associative array combined with integer-indexed array. 
+        /// Get a result row as an associative array combined with integer-indexed array.
         /// </summary>
         /// <param name="resultHandle">Query result resource.</param>
         /// <returns>
@@ -945,12 +944,12 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
-        /// Get a result row as an array with a specified key format. 
+        /// Get a result row as an array with a specified key format.
         /// </summary>
         /// <param name="resultHandle">Query result resource.</param>
         /// <param name="resultType">Type(s) of keys in the resulting array.</param>
         /// <returns>
-        /// Array containing values of the rows indexed by column keys and/or column indices depending 
+        /// Array containing values of the rows indexed by column keys and/or column indices depending
         /// on value of <paramref name="resultType"/>.
         /// </returns>
         [ImplementsFunction("mysql_fetch_array")]
@@ -971,11 +970,11 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
-        /// Get a result row as an object. 
+        /// Get a result row as an object.
         /// </summary>
         /// <param name="resultHandle">Query result resource.</param>
         /// <returns>
-        /// Object whose fields contain values from the current row. 
+        /// Object whose fields contain values from the current row.
         /// Field names corresponds to the column names.
         /// </returns>
         [ImplementsFunction("mysql_fetch_object")]
@@ -1077,7 +1076,7 @@ namespace PHP.Library.Data
         /// </summary>
         /// <param name="linkIdentifier">Connection resource.</param>
         /// <returns>
-        /// Error message, empty string if no error occured, or a <B>null</B> reference 
+        /// Error message, empty string if no error occured, or a <B>null</B> reference
         /// if the connection resource is invalid.
         /// </returns>
         [ImplementsFunction("mysql_error")]
@@ -1143,7 +1142,7 @@ namespace PHP.Library.Data
         /// <param name="field">Column (field) integer index or string name.</param>
         /// <returns>The value of the cell or a <B>null</B> reference (<B>false</B> in PHP) on failure (invalid resource or row/field index/name).</returns>
         /// <remarks>
-        /// Result is affected by run-time quoting 
+        /// Result is affected by run-time quoting
         /// (<see cref="LocalConfiguration.VariablesSection.QuoteRuntimeVariables"/>).
         /// </remarks>
         [ImplementsFunction("mysql_result")]
@@ -1177,7 +1176,7 @@ namespace PHP.Library.Data
         #region mysql_field_name, mysql_field_type, mysql_field_len
 
         /// <summary>
-        /// Gets a name of a specified column (field) in a result. 
+        /// Gets a name of a specified column (field) in a result.
         /// </summary>
         /// <param name="resultHandle">Query result resource.</param>
         /// <param name="fieldIndex">Column (field) index.</param>
@@ -1192,13 +1191,13 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
-        /// Gets a type of a specified column (field) in a result. 
+        /// Gets a type of a specified column (field) in a result.
         /// </summary>
         /// <param name="resultHandle">Query result resource.</param>
         /// <param name="fieldIndex">Column index.</param>
         /// <returns>MySQL type translated to PHP terminology.</returns>
         /// <remarks>
-        /// Possible values are: "string", "int", "real", "year", "date", "timestamp", "datetime", "time", 
+        /// Possible values are: "string", "int", "real", "year", "date", "timestamp", "datetime", "time",
         /// "set", "enum", "blob", "bit" (Phalanger specific), "NULL", and "unknown".
         /// </remarks>
         [ImplementsFunction("mysql_field_type")]
@@ -1211,7 +1210,7 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
-        /// Gets a length of a specified column (field) in a result. 
+        /// Gets a length of a specified column (field) in a result.
         /// </summary>
         /// <param name="resultHandle">Query result resource.</param>
         /// <param name="fieldIndex">Column index.</param>
@@ -1484,7 +1483,7 @@ namespace PHP.Library.Data
         #region TODO: mysql_unbuffered_query
 
         /// <summary>
-        /// Executes a query. 
+        /// Executes a query.
         /// </summary>
         /// <param name="query">Query string.</param>
         /// <returns>Query result resource.</returns>
@@ -1501,7 +1500,7 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
-        /// Executes a query. 
+        /// Executes a query.
         /// </summary>
         /// <param name="query">Query string.</param>
         /// <param name="linkIdentifier">Connection resource.</param>
@@ -1553,7 +1552,7 @@ namespace PHP.Library.Data
         /// <param name="rowIndex">Database index.</param>
         /// <returns>Database name.</returns>
         /// <remarks>
-        /// Result is affected by run-time quoting 
+        /// Result is affected by run-time quoting
         /// (<see cref="LocalConfiguration.VariablesSection.QuoteRuntimeVariables"/>).
         /// </remarks>
         [ImplementsFunction("mysql_db_name")]
@@ -1617,7 +1616,7 @@ namespace PHP.Library.Data
         /// <param name="rowIndex">Table index.</param>
         /// <returns>Table name.</returns>
         /// <remarks>
-        /// Result is affected by run-time quoting 
+        /// Result is affected by run-time quoting
         /// (<see cref="LocalConfiguration.VariablesSection.QuoteRuntimeVariables"/>).
         /// </remarks>
         [ImplementsFunction("mysql_tablename")]
@@ -2041,7 +2040,7 @@ namespace PHP.Library.Data
         #region mysql_ping
 
         /// <summary>
-        /// Pings a server connection or reconnect if there is no connection. 
+        /// Pings a server connection or reconnect if there is no connection.
         /// </summary>
         /// <returns>Whether connection is established.</returns>
         [ImplementsFunction("mysql_ping")]
@@ -2056,7 +2055,7 @@ namespace PHP.Library.Data
         }
 
         /// <summary>
-        /// Pings a server connection or reconnect if there is no connection. 
+        /// Pings a server connection or reconnect if there is no connection.
         /// </summary>
         /// <param name="linkIdentifier">Connection resource.</param>
         /// <returns>Whether connection is established.</returns>

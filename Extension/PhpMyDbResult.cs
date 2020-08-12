@@ -1,12 +1,12 @@
 /*
 
- Copyright (c) 2005-2006 Tomas Matousek.  
+ Copyright (c) 2005-2006 Tomas Matousek.
 
  This software is distributed under GNU General Public License version 2.
- The use and distribution terms for this software are contained in the file named LICENSE, 
- which can be found in the same directory as this file. By using this software 
+ The use and distribution terms for this software are contained in the file named LICENSE,
+ which can be found in the same directory as this file. By using this software
  in any fashion, you are agreeing to be bound by the terms of this license.
- 
+
  You must not remove this notice from this software.
 
 */
@@ -14,15 +14,10 @@
 using System;
 using System.Data;
 using System.Diagnostics;
-using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
-
-using MySql.Data.MySqlClient;
-using MySql.Data.Types;
-
 using PHP.Core;
 using System.Data.Common;
+using MySqlConnector;
 
 namespace PHP.Library.Data
 {
@@ -69,7 +64,7 @@ namespace PHP.Library.Data
         {
             var my_reader = Reader;
             var oa = new object[my_reader.FieldCount];
-            
+
             if (convertTypes)
             {
                 Debug.Assert(dataTypes.Length >= oa.Length);
