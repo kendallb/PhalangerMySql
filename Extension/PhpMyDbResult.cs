@@ -104,6 +104,11 @@ namespace PHP.Library.Data
         /// </summary>
         public IReadOnlyList<DbColumn> ColumnSchema => (IReadOnlyList<DbColumn>)GetRowCustomData();
 
+        /// <summary>
+        /// Get the column schema for a field in the result set
+        /// </summary>
+        /// <param name="fieldIndex">Index of the field</param>
+        /// <returns>Column schema for the field</returns>
         public MySqlDbColumn GetColumnSchema(int fieldIndex) => CheckFieldIndex(fieldIndex) ? (MySqlDbColumn)ColumnSchema[fieldIndex] : null;
 
         /// <summary>
@@ -114,6 +119,11 @@ namespace PHP.Library.Data
             return Reader.FieldCount != 0 ? (IReadOnlyList<DbColumn>)Reader.GetColumnSchema() : Array.Empty<DbColumn>();
         }
 
+        /// <summary>
+        /// Get the field length for a database result
+        /// </summary>
+        /// <param name="fieldIndex">Index of the field in the result set</param>
+        /// <returns>Field length</returns>
         public override int GetFieldLength(int fieldIndex)
         {
             if (CheckFieldIndex(fieldIndex))
