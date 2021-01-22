@@ -17,6 +17,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using PHP.Core;
 using System.Data.Common;
+using System.Reflection;
 using MySqlConnector;
 
 namespace PHP.Library.Data
@@ -26,11 +27,25 @@ namespace PHP.Library.Data
 	/// </summary>
     public sealed class PhpMyDbResult : PhpDbResult
     {
-        public new MySqlCommand Command => (MySqlCommand)base.Command;
-
-        public new MySqlDataReader Reader => (MySqlDataReader)base.Reader;
-
-        //public new PhpMyDbConnection Connection => (PhpMyDbConnection)base.Connection;
+        /// <summary>
+        /// Gets the underlying MySqlDataReader. We specifically support the case where the reader is a wrapped connection
+        /// such as we get from Glimpse, and we look for InnerConnection to find the native MySqlConnection when we need it.
+        /// </summary>
+        private new MySqlDataReader Reader
+        {
+            get
+            {
+                if (_reader != null) return _reader;
+                _reader = base.Reader as MySqlDataReader;
+                if (_reader != null) return _reader;
+                if (_innerDataReaderMethod == null)
+                    _innerDataReaderMethod = base.Reader.GetType().GetMethod("get_InnerDataReader", BindingFlags.Instance | BindingFlags.Public);
+                _reader = _innerDataReaderMethod?.Invoke(base.Reader, null) as MySqlDataReader;
+                return _reader;
+            }
+        }
+        private MySqlDataReader _reader;
+        private static MethodInfo _innerDataReaderMethod;
 
         /// <summary>
         /// Creates an instance of a result resource.

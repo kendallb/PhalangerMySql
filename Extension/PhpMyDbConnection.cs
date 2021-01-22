@@ -13,6 +13,8 @@
 
 using System;
 using System.Data;
+using System.Diagnostics;
+using System.Reflection;
 using MySqlConnector;
 using PHP.Core;
 
@@ -64,9 +66,17 @@ namespace PHP.Library.Data
 	    {
 	        get
 	        {
-				return connection as MySqlConnection;
-			}
+		        if (_mySqlConnection != null) return _mySqlConnection;
+		        _mySqlConnection = connection as MySqlConnection;
+		        if (_mySqlConnection != null) return _mySqlConnection;
+		        if (_innerConnectionMethod == null)
+			        _innerConnectionMethod = connection.GetType().GetMethod("get_InnerConnection", BindingFlags.Instance | BindingFlags.Public);
+		        _mySqlConnection = _innerConnectionMethod?.Invoke(connection, null) as MySqlConnection;
+		        return _mySqlConnection;
+	        }
 	    }
+	    private MySqlConnection _mySqlConnection;
+	    private static MethodInfo _innerConnectionMethod;
 
 	    /// <summary>
         /// Override the connection to use a shared connection
